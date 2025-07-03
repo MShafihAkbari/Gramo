@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { FileText, Download, File } from 'lucide-react';
 import { exportToPDF, exportToWord, exportToText } from '../utils/exportUtils';
 
@@ -12,36 +13,41 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({ text }) => {
       label: 'PDF',
       icon: FileText,
       onClick: () => exportToPDF(text),
-      color: 'bg-red-500 hover:bg-red-600',
+      gradient: 'from-red-500 to-pink-600',
     },
     {
       label: 'Word',
       icon: File,
       onClick: () => exportToWord(text),
-      color: 'bg-blue-500 hover:bg-blue-600',
+      gradient: 'from-blue-500 to-indigo-600',
     },
     {
       label: 'Text',
       icon: Download,
       onClick: () => exportToText(text),
-      color: 'bg-green-500 hover:bg-green-600',
+      gradient: 'from-green-500 to-emerald-600',
     },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {exportOptions.map((option) => {
+    <div className="grid grid-cols-3 gap-4">
+      {exportOptions.map((option, index) => {
         const Icon = option.icon;
         
         return (
-          <button
+          <motion.button
             key={option.label}
             onClick={option.onClick}
-            className={`${option.color} text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2`}
+            className={`bg-gradient-to-r ${option.gradient} text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center space-x-3`}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <Icon className="w-4 h-4" />
-            <span className="text-sm">{option.label}</span>
-          </button>
+            <Icon className="w-5 h-5" />
+            <span>{option.label}</span>
+          </motion.button>
         );
       })}
     </div>

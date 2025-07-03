@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { User, Briefcase, MessageCircle } from 'lucide-react';
 
 interface ToneSelectorProps {
@@ -15,44 +16,79 @@ export const ToneSelector: React.FC<ToneSelectorProps> = ({
       id: 'neutral' as const,
       label: 'Neutral',
       icon: User,
-      description: 'Keep original tone',
+      description: 'Preserve original tone',
+      gradient: 'from-gray-500 to-gray-600',
     },
     {
       id: 'formal' as const,
       label: 'Formal',
       icon: Briefcase,
       description: 'Professional & polished',
+      gradient: 'from-blue-500 to-purple-600',
     },
     {
       id: 'casual' as const,
       label: 'Casual',
       icon: MessageCircle,
       description: 'Friendly & conversational',
+      gradient: 'from-green-500 to-teal-600',
     },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-4">
       {tones.map((tone) => {
         const Icon = tone.icon;
         const isSelected = selectedTone === tone.id;
         
         return (
-          <button
+          <motion.button
             key={tone.id}
             onClick={() => onToneChange(tone.id)}
-            className={`p-4 rounded-xl border-2 transition-all duration-200 text-center ${
+            className={`p-6 rounded-2xl border-2 transition-all duration-300 text-center relative overflow-hidden ${
               isSelected
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-600 dark:text-gray-400'
+                ? 'border-white/40 bg-white/10 backdrop-blur-sm'
+                : 'border-white/20 hover:border-white/30 hover:bg-white/5'
             }`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            <Icon className={`w-6 h-6 mx-auto mb-2 ${
-              isSelected ? 'text-primary-600 dark:text-primary-400' : ''
-            }`} />
-            <div className="text-sm font-medium">{tone.label}</div>
-            <div className="text-xs opacity-75 mt-1">{tone.description}</div>
-          </button>
+            {isSelected && (
+              <motion.div
+                className={`absolute inset-0 bg-gradient-to-br ${tone.gradient} opacity-20`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.2 }}
+                transition={{ duration: 0.3 }}
+              />
+            )}
+            
+            <div className="relative z-10">
+              <motion.div
+                className="flex justify-center mb-3"
+                animate={isSelected ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 0.5 }}
+              >
+                <Icon className={`w-8 h-8 ${
+                  isSelected ? 'text-white' : 'text-white/70'
+                }`} />
+              </motion.div>
+              
+              <div className={`text-lg font-semibold mb-2 ${
+                isSelected ? 'text-white' : 'text-white/80'
+              }`}>
+                {tone.label}
+              </div>
+              
+              <div className={`text-sm ${
+                isSelected ? 'text-white/90' : 'text-white/60'
+              }`}>
+                {tone.description}
+              </div>
+            </div>
+          </motion.button>
         );
       })}
     </div>

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Moon, Sun, FileText, Download, Copy, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Moon, Sun, Sparkles, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ToneSelector } from './components/ToneSelector';
 import { TextInput } from './components/TextInput';
 import { OutputDisplay } from './components/OutputDisplay';
 import { ExportButtons } from './components/ExportButtons';
-import { ApiKeySetup } from './components/ApiKeySetup';
 import { useGrammarChecker } from './hooks/useGrammarChecker';
 import { useDarkMode } from './hooks/useDarkMode';
 
@@ -12,114 +12,173 @@ function App() {
   const [inputText, setInputText] = useState('');
   const [selectedTone, setSelectedTone] = useState<'neutral' | 'formal' | 'casual'>('neutral');
   const [outputText, setOutputText] = useState('');
+  const [streamingText, setStreamingText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentApiKey, setCurrentApiKey] = useState<string | null>(null);
   const { isDark, toggleDarkMode } = useDarkMode();
   const { refineText } = useGrammarChecker();
-
-  useEffect(() => {
-    const savedKey = localStorage.getItem('openai_api_key');
-    if (savedKey) {
-      setCurrentApiKey(savedKey);
-    }
-  }, []);
 
   const handleRefineText = async () => {
     if (!inputText.trim()) return;
     
     setIsProcessing(true);
     setError(null);
+    setOutputText('');
+    setStreamingText('');
     
     try {
-      const refined = await refineText(inputText, selectedTone, currentApiKey!);
+      const refined = await refineText(inputText, selectedTone, (chunk: string) => {
+        setStreamingText(prev => prev + chunk);
+      });
+      
       setOutputText(refined);
+      setStreamingText('');
     } catch (error) {
       console.error('Error refining text:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       setError(errorMessage);
       setOutputText('');
+      setStreamingText('');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleApiKeySet = () => {
-    const savedKey = localStorage.getItem('openai_api_key');
-    setCurrentApiKey(savedKey);
-    setError(null);
-  };
-
-  const handleApiKeyRemoved = () => {
-    setCurrentApiKey(null);
-  };
-
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
-      <div className="gradient-bg min-h-screen">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className={`min-h-screen transition-all duration-700 ${isDark ? 'dark' : ''}`}>
+      <div className="luxury-gradient min-h-screen relative overflow-hidden">
+        {/* Floating Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            className="absolute -top-40 -right-40 w-80 h-80 bg-white/5 rounded-full blur-3xl"
+            animate={{
+              x: [0, 100, 0],
+              y: [0, -50, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+          <motion.div
+            className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
+            animate={{
+              x: [0, -80, 0],
+              y: [0, 30, 0],
+            }}
+            transition={{
+              duration: 25,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+        </div>
+
+        <div className="container mx-auto px-6 py-12 max-w-7xl relative z-10">
           {/* Header */}
-          <header className="flex justify-between items-center mb-12">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
+          <motion.header 
+            className="flex justify-between items-center mb-16"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="flex items-center space-x-4">
+              <motion.div 
+                className="w-14 h-14 luxury-glass rounded-2xl flex items-center justify-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Sparkles className="w-8 h-8 text-white" />
+              </motion.div>
               <div>
-                <h1 className="text-3xl font-bold text-white">Gramo</h1>
-                <p className="text-white/80 text-sm">AI-Powered Grammar Checker</p>
+                <h1 className="text-4xl font-bold text-white mb-1">Gramo</h1>
+                <p className="text-white/70 text-lg">AI-Powered Grammar Perfection</p>
               </div>
             </div>
             
-            <button
+            <motion.button
               onClick={toggleDarkMode}
-              className="p-3 rounded-xl glass-effect hover:bg-white/30 dark:hover:bg-gray-800/30 transition-all duration-200"
+              className="p-4 luxury-glass rounded-2xl hover:bg-white/20 transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              {isDark ? (
-                <Sun className="w-5 h-5 text-white" />
-              ) : (
-                <Moon className="w-5 h-5 text-white" />
-              )}
-            </button>
-          </header>
-
-          {/* API Key Setup */}
-          <ApiKeySetup onApiKeySet={handleApiKeySet} onApiKeyRemoved={handleApiKeyRemoved} />
+              <AnimatePresence mode="wait">
+                {isDark ? (
+                  <motion.div
+                    key="sun"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Sun className="w-6 h-6 text-white" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="moon"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Moon className="w-6 h-6 text-white" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </motion.header>
 
           {/* Error Display */}
-          {error && (
-            <div className="glass-effect rounded-2xl p-4 shadow-xl mb-6 border-2 border-red-200 dark:border-red-800">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
-                    Error
-                  </h3>
-                  <p className="text-sm text-red-700 dark:text-red-300">
-                    {error}
-                  </p>
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                className="luxury-glass rounded-3xl p-6 shadow-2xl mb-8 border-2 border-red-400/30"
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-red-300 mb-2">
+                      Processing Error
+                    </h3>
+                    <p className="text-red-200/80 leading-relaxed">
+                      {error}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Main Content */}
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid xl:grid-cols-2 gap-10">
             {/* Input Section */}
-            <div className="space-y-6">
-              <div className="glass-effect rounded-2xl p-6 shadow-xl">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-                  Input Text
+            <motion.div 
+              className="space-y-8"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <div className="luxury-glass rounded-3xl p-8 shadow-2xl">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center space-x-3">
+                  <span>Input Text</span>
                 </h2>
                 <TextInput
                   value={inputText}
                   onChange={setInputText}
-                  placeholder="Paste or type your text here to fix grammar, punctuation, and spelling errors..."
+                  placeholder="Paste or type your text here to transform it with AI-powered grammar correction, style enhancement, and tone adjustment..."
                 />
               </div>
 
-              <div className="glass-effect rounded-2xl p-6 shadow-xl">
-                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
-                  Select Tone
+              <div className="luxury-glass rounded-3xl p-8 shadow-2xl">
+                <h3 className="text-xl font-semibold text-white mb-6">
+                  Select Writing Tone
                 </h3>
                 <ToneSelector
                   selectedTone={selectedTone}
@@ -127,62 +186,96 @@ function App() {
                 />
               </div>
 
-              <button
+              <motion.button
                 onClick={handleRefineText}
-                disabled={!inputText.trim() || isProcessing || !currentApiKey}
-                className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                disabled={!inputText.trim() || isProcessing}
+                className="w-full luxury-button text-white font-semibold py-6 px-8 rounded-2xl transition-all duration-300 shadow-2xl flex items-center justify-center space-x-3 text-lg"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>AI is refining your text...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    <span>Fix with AI</span>
-                  </>
-                )}
-              </button>
-            </div>
+                <AnimatePresence mode="wait">
+                  {isProcessing ? (
+                    <motion.div
+                      key="processing"
+                      className="flex items-center space-x-3"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Sparkles className="w-6 h-6" />
+                      </motion.div>
+                      <span>AI is crafting your perfect text...</span>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="ready"
+                      className="flex items-center space-x-3"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <Sparkles className="w-6 h-6" />
+                      <span>Transform with AI</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            </motion.div>
 
             {/* Output Section */}
-            <div className="space-y-6">
-              <div className="glass-effect rounded-2xl p-6 shadow-xl">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                    AI-Refined Text
+            <motion.div 
+              className="space-y-8"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <div className="luxury-glass rounded-3xl p-8 shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-white">
+                    AI-Perfected Text
                   </h2>
-                  {outputText && (
-                    <button
-                      onClick={() => navigator.clipboard.writeText(outputText)}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    </button>
-                  )}
                 </div>
-                <OutputDisplay text={outputText} isProcessing={isProcessing} />
+                <OutputDisplay 
+                  text={outputText} 
+                  streamingText={streamingText}
+                  isProcessing={isProcessing} 
+                />
               </div>
 
-              {outputText && (
-                <div className="glass-effect rounded-2xl p-6 shadow-xl">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
-                    Export Options
-                  </h3>
-                  <ExportButtons text={outputText} />
-                </div>
-              )}
-            </div>
+              <AnimatePresence>
+                {(outputText || streamingText) && (
+                  <motion.div 
+                    className="luxury-glass rounded-3xl p-8 shadow-2xl"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <h3 className="text-xl font-semibold text-white mb-6">
+                      Export Options
+                    </h3>
+                    <ExportButtons text={outputText || streamingText} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </div>
 
           {/* Footer */}
-          <footer className="mt-16 text-center">
-            <p className="text-white/60 text-sm">
-              Gramo – AI-Powered Grammar Checker
+          <motion.footer 
+            className="mt-20 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+          >
+            <p className="text-white/50 text-lg">
+              Gramo – Where AI Meets Perfect Writing
             </p>
-          </footer>
+          </motion.footer>
         </div>
       </div>
     </div>

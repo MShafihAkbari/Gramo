@@ -1,24 +1,38 @@
 import { useState } from 'react';
+import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
+import { AzureKeyCredential } from "@azure/core-auth";
 
 export const useGrammarChecker = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const refineText = async (text: string, tone: 'neutral' | 'formal' | 'casual', apiKey: string): Promise<string> => {
+  const refineText = async (
+    text: string, 
+    tone: 'neutral' | 'formal' | 'casual',
+    onStream?: (chunk: string) => void
+  ): Promise<string> => {
     setIsLoading(true);
     
     try {
-      // Use OpenAI GPT-4 for comprehensive text refinement
-      const refinedText = await refineWithAI(text, tone, apiKey);
+      const refinedText = await refineWithGitHubAI(text, tone, onStream);
       return refinedText;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refineWithAI = async (text: string, tone: 'neutral' | 'formal' | 'casual', apiKey: string): Promise<string> => {
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required. Please provide your API key.');
+  const refineWithGitHubAI = async (
+    text: string, 
+    tone: 'neutral' | 'formal' | 'casual',
+    onStream?: (chunk: string) => void
+  ): Promise<string> => {
+    const token = import.meta.env.VITE_GITHUB_TOKEN;
+    
+    if (!token) {
+      throw new Error('GitHub token is not configured. Please check your environment variables.');
     }
+
+    const endpoint = "https://models.inference.ai.azure.com";
+    const model = "gpt-4o";
 
     const toneInstructions = {
       neutral: 'Maintain the original tone and style while fixing errors.',
@@ -41,55 +55,69 @@ Important guidelines:
 - Maintain the original formatting (paragraphs, line breaks)`;
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4',
+      const client = ModelClient(endpoint, new AzureKeyCredential(token));
+
+      const response = await client.path("/chat/completions").post({
+        body: {
           messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            {
-              role: 'user',
-              content: text
-            }
+            { role: "system", content: systemPrompt },
+            { role: "user", content: text }
           ],
           temperature: 0.3,
+          top_p: 0.9,
           max_tokens: 2000,
-        }),
+          model: model,
+          stream: true
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (response.status === 401) {
-          throw new Error('Invalid OpenAI API key. Please check your API key.');
-        } else if (response.status === 429) {
-          throw new Error('OpenAI API rate limit exceeded. Please try again in a moment.');
-        } else if (response.status === 403) {
-          throw new Error('OpenAI API access denied. Please check your API key permissions.');
-        } else {
-          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      if (isUnexpected(response)) {
+        throw new Error(`GitHub AI API error: ${response.body?.error?.message || 'Unknown error'}`);
+      }
+
+      let fullResponse = '';
+      
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                
+                if (content) {
+                  fullResponse += content;
+                  if (onStream) {
+                    onStream(content);
+                  }
+                }
+              } catch (e) {
+                // Skip invalid JSON lines
+                continue;
+              }
+            }
+          }
         }
       }
 
-      const data = await response.json();
-      
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response from OpenAI API');
-      }
-
-      return data.choices[0].message.content.trim();
+      return fullResponse.trim();
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       } else {
-        throw new Error('Failed to connect to OpenAI API. Please check your internet connection.');
+        throw new Error('Failed to connect to GitHub AI API. Please check your internet connection.');
       }
     }
   };
