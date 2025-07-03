@@ -17,9 +17,10 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
   const [displayText, setDisplayText] = useState('');
 
   useEffect(() => {
-    if (streamingText) {
+    // Always show streaming text first
+    if (streamingText && streamingText.trim()) {
       setDisplayText(streamingText);
-    } else if (text) {
+    } else if (text && text.trim()) {
       setDisplayText(text);
     } else {
       setDisplayText('');
@@ -34,6 +35,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
     }
   };
 
+  // Loading screen
   if (isProcessing && !streamingText) {
     return (
       <div className="h-80 flex items-center justify-center bg-black/20 rounded-2xl border border-white/10 backdrop-blur-sm">
@@ -49,6 +51,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
     );
   }
 
+  // Placeholder before input
   if (!displayText && !isProcessing) {
     return (
       <div className="h-80 flex items-center justify-center bg-black/20 rounded-2xl border border-white/10 backdrop-blur-sm">
@@ -58,14 +61,14 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             whileHover={{ scale: 1.05 }}
           >
             <motion.div
-              animate={{ 
+              animate={{
                 scale: [1, 1.2, 1],
-                opacity: [0.5, 1, 0.5]
+                opacity: [0.5, 1, 0.5],
               }}
-              transition={{ 
-                duration: 2, 
+              transition={{
+                duration: 2,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: 'easeInOut',
               }}
             >
               ✨
@@ -79,6 +82,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
     );
   }
 
+  // Final output view
   return (
     <div className="relative">
       {displayText && (
@@ -114,18 +118,19 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
           </AnimatePresence>
         </motion.button>
       )}
-      
+
       <div className="h-80 p-6 bg-black/20 rounded-2xl border border-white/10 backdrop-blur-sm overflow-y-auto custom-scrollbar">
-        <motion.div 
+        <motion.div
           className="whitespace-pre-wrap text-white leading-relaxed text-lg"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
           {displayText}
-          {streamingText && (
+          {/* Blinking cursor */}
+          {isProcessing && (
             <motion.span
-              className="inline-block w-0.5 h-6 bg-white ml-1"
+              className="inline-block w-1 h-6 bg-white ml-1"
               animate={{ opacity: [0, 1, 0] }}
               transition={{ duration: 1, repeat: Infinity }}
             />
