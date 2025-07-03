@@ -14,18 +14,14 @@ function App() {
   const [outputText, setOutputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const [currentApiKey, setCurrentApiKey] = useState<string | null>(null);
   const { isDark, toggleDarkMode } = useDarkMode();
   const { refineText } = useGrammarChecker();
 
   useEffect(() => {
     const savedKey = localStorage.getItem('openai_api_key');
     if (savedKey) {
-      setHasApiKey(true);
-      // Set environment variable for the session
-      (window as any).process = (window as any).process || {};
-      (window as any).process.env = (window as any).process.env || {};
-      (window as any).process.env.VITE_OPENAI_API_KEY = savedKey;
+      setCurrentApiKey(savedKey);
     }
   }, []);
 
@@ -36,7 +32,7 @@ function App() {
     setError(null);
     
     try {
-      const refined = await refineText(inputText, selectedTone);
+      const refined = await refineText(inputText, selectedTone, currentApiKey!);
       setOutputText(refined);
     } catch (error) {
       console.error('Error refining text:', error);
@@ -49,8 +45,13 @@ function App() {
   };
 
   const handleApiKeySet = () => {
-    setHasApiKey(true);
+    const savedKey = localStorage.getItem('openai_api_key');
+    setCurrentApiKey(savedKey);
     setError(null);
+  };
+
+  const handleApiKeyRemoved = () => {
+    setCurrentApiKey(null);
   };
 
   return (
@@ -82,7 +83,7 @@ function App() {
           </header>
 
           {/* API Key Setup */}
-          <ApiKeySetup onApiKeySet={handleApiKeySet} />
+          <ApiKeySetup onApiKeySet={handleApiKeySet} onApiKeyRemoved={handleApiKeyRemoved} />
 
           {/* Error Display */}
           {error && (
@@ -128,7 +129,7 @@ function App() {
 
               <button
                 onClick={handleRefineText}
-                disabled={!inputText.trim() || isProcessing || !hasApiKey}
+                disabled={!inputText.trim() || isProcessing || !currentApiKey}
                 className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {isProcessing ? (

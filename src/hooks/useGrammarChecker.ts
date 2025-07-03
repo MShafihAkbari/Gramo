@@ -3,23 +3,21 @@ import { useState } from 'react';
 export const useGrammarChecker = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const refineText = async (text: string, tone: 'neutral' | 'formal' | 'casual'): Promise<string> => {
+  const refineText = async (text: string, tone: 'neutral' | 'formal' | 'casual', apiKey: string): Promise<string> => {
     setIsLoading(true);
     
     try {
       // Use OpenAI GPT-4 for comprehensive text refinement
-      const refinedText = await refineWithAI(text, tone);
+      const refinedText = await refineWithAI(text, tone, apiKey);
       return refinedText;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refineWithAI = async (text: string, tone: 'neutral' | 'formal' | 'casual'): Promise<string> => {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    
+  const refineWithAI = async (text: string, tone: 'neutral' | 'formal' | 'casual', apiKey: string): Promise<string> => {
     if (!apiKey) {
-      throw new Error('OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your environment variables.');
+      throw new Error('OpenAI API key is required. Please provide your API key.');
     }
 
     const toneInstructions = {
@@ -70,7 +68,7 @@ Important guidelines:
         const errorData = await response.json().catch(() => ({}));
         
         if (response.status === 401) {
-          throw new Error('Invalid OpenAI API key. Please check your VITE_OPENAI_API_KEY environment variable.');
+          throw new Error('Invalid OpenAI API key. Please check your API key.');
         } else if (response.status === 429) {
           throw new Error('OpenAI API rate limit exceeded. Please try again in a moment.');
         } else if (response.status === 403) {

@@ -3,9 +3,10 @@ import { Key, Eye, EyeOff, ExternalLink } from 'lucide-react';
 
 interface ApiKeySetupProps {
   onApiKeySet: () => void;
+  onApiKeyRemoved: () => void;
 }
 
-export const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet }) => {
+export const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet, onApiKeyRemoved }) => {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isValid, setIsValid] = useState(false);
@@ -21,11 +22,6 @@ export const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet }) => {
   const handleSaveApiKey = () => {
     if (apiKey.trim()) {
       localStorage.setItem('openai_api_key', apiKey.trim());
-      // Set environment variable for the session
-      (window as any).process = (window as any).process || {};
-      (window as any).process.env = (window as any).process.env || {};
-      (window as any).process.env.VITE_OPENAI_API_KEY = apiKey.trim();
-      
       setIsValid(true);
       onApiKeySet();
     }
@@ -35,6 +31,7 @@ export const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet }) => {
     localStorage.removeItem('openai_api_key');
     setApiKey('');
     setIsValid(false);
+    onApiKeyRemoved();
   };
 
   if (isValid) {
