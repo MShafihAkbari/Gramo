@@ -6,12 +6,12 @@ export const useGrammarChecker = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const refineText = async (
-    text: string, 
+    text: string,
     tone: 'neutral' | 'formal' | 'casual',
     onStream?: (chunk: string) => void
   ): Promise<string> => {
     setIsLoading(true);
-    
+
     try {
       const refinedText = await refineWithGitHubAI(text, tone, onStream);
       return refinedText;
@@ -21,12 +21,12 @@ export const useGrammarChecker = () => {
   };
 
   const refineWithGitHubAI = async (
-    text: string, 
+    text: string,
     tone: 'neutral' | 'formal' | 'casual',
     onStream?: (chunk: string) => void
   ): Promise<string> => {
     const token = import.meta.env.VITE_GITHUB_TOKEN;
-    
+
     if (!token) {
       throw new Error('GitHub token is not configured. Please check your environment variables.');
     }
@@ -76,9 +76,11 @@ Important guidelines:
       }
 
       let fullResponse = '';
-      
-      if (response.body) {
-        const reader = response.body.getReader();
+
+      // ✅ Safely check if response.body supports streaming
+      const body: any = response.body;
+      if (body && typeof body.getReader === 'function') {
+        const reader = body.getReader();
         const decoder = new TextDecoder();
 
         while (true) {
@@ -96,19 +98,23 @@ Important guidelines:
               try {
                 const parsed = JSON.parse(data);
                 const content = parsed.choices?.[0]?.delta?.content;
-                
+
                 if (content) {
                   fullResponse += content;
-                  if (onStream) {
-                    onStream(content);
-                  }
+                  if (onStream) onStream(content);
                 }
-              } catch (e) {
-                // Skip invalid JSON lines
-                continue;
+              } catch {
+                continue; // skip malformed JSON
               }
             }
           }
+        }
+      } else {
+        // ❗ Fallback: if no streaming, assume it's a full JSON response
+        const json = await response.json?.();
+        if (json?.choices?.[0]?.message?.content) {
+          fullResponse = json.choices[0].message.content;
+          if (onStream) onStream(fullResponse);
         }
       }
 
