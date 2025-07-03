@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check } from 'lucide-react';
 
@@ -13,9 +13,15 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
   streamingText,
   isProcessing,
 }) => {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const displayText = streamingText || text;
+  // Use text OR streamingText, but prefer text if available (final output)
+  const displayText = text || streamingText;
+
+  // Reset copied state when displayText changes
+  useEffect(() => {
+    setCopied(false);
+  }, [displayText]);
 
   const handleCopy = async () => {
     if (displayText) {
@@ -25,8 +31,24 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
     }
   };
 
-  // ❌ No result to show yet
-  if (!displayText && !isProcessing) {
+  // Show loading spinner when processing but no streaming text yet
+  if (isProcessing && !streamingText) {
+    return (
+      <div className="h-80 flex items-center justify-center bg-black/20 rounded-2xl border border-white/10 backdrop-blur-sm">
+        <div className="text-center">
+          <motion.div
+            className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full mx-auto mb-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-white/70 text-lg">AI is analyzing your text...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show placeholder only if NO text and NO streaming and NOT processing
+  if (!text && !streamingText && !isProcessing) {
     return (
       <div className="h-80 flex items-center justify-center bg-black/20 rounded-2xl border border-white/10 backdrop-blur-sm">
         <div className="text-center">
@@ -35,8 +57,15 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             whileHover={{ scale: 1.05 }}
           >
             <motion.div
-              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 1, 0.5]
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
             >
               ✨
             </motion.div>
@@ -49,7 +78,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
     );
   }
 
-  // ✅ Displaying output (even if still streaming)
+  // Show the output text with copy button
   return (
     <div className="relative">
       {displayText && (
@@ -85,18 +114,18 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
           </AnimatePresence>
         </motion.button>
       )}
-
+      
       <div className="h-80 p-6 bg-black/20 rounded-2xl border border-white/10 backdrop-blur-sm overflow-y-auto custom-scrollbar">
-        <motion.div
+        <motion.div 
           className="whitespace-pre-wrap text-white leading-relaxed text-lg"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
           {displayText}
-          {isProcessing && (
+          {streamingText && !text && ( // show cursor only when streaming and no final text yet
             <motion.span
-              className="inline-block w-1 h-6 bg-white ml-1"
+              className="inline-block w-0.5 h-6 bg-white ml-1"
               animate={{ opacity: [0, 1, 0] }}
               transition={{ duration: 1, repeat: Infinity }}
             />
