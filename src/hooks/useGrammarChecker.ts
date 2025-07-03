@@ -7,67 +7,93 @@ export const useGrammarChecker = () => {
     setIsLoading(true);
     
     try {
-      // First, check grammar with LanguageTool (mock implementation)
-      const grammarCorrected = await checkGrammar(text);
-      
-      // Then, refine tone with OpenAI GPT-4
-      const toneRefined = await refineTone(grammarCorrected, tone);
-      
-      return toneRefined;
+      // Use OpenAI GPT-4 for comprehensive text refinement
+      const refinedText = await refineWithAI(text, tone);
+      return refinedText;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const checkGrammar = async (text: string): Promise<string> => {
-    // Mock LanguageTool API call
-    // In a real implementation, you would call the LanguageTool API here
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const refineWithAI = async (text: string, tone: 'neutral' | 'formal' | 'casual'): Promise<string> => {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
     
-    // Basic grammar corrections (mock)
-    let corrected = text
-      .replace(/\bi\b/g, 'I')
-      .replace(/\bdont\b/g, "don't")
-      .replace(/\bcant\b/g, "can't")
-      .replace(/\bwont\b/g, "won't")
-      .replace(/\bitsn't\b/g, "isn't")
-      .replace(/\byour\s+welcome\b/g, "you're welcome")
-      .replace(/\bthere\s+going\b/g, "they're going")
-      .replace(/\bits\s+a\s+good\s+day\b/g, "it's a good day");
-    
-    return corrected;
-  };
-
-  const refineTone = async (text: string, tone: 'neutral' | 'formal' | 'casual'): Promise<string> => {
-    if (tone === 'neutral') {
-      return text;
+    if (!apiKey) {
+      throw new Error('OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your environment variables.');
     }
 
-    // Mock OpenAI API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock tone refinement
-    if (tone === 'formal') {
-      return text
-        .replace(/\bhi\b/gi, 'Hello')
-        .replace(/\bthanks\b/gi, 'Thank you')
-        .replace(/\bokay\b/gi, 'Very well')
-        .replace(/\bawesome\b/gi, 'excellent')
-        .replace(/\bgreat\b/gi, 'outstanding')
-        .replace(/\bgonna\b/gi, 'going to')
-        .replace(/\bwanna\b/gi, 'want to');
-    } else if (tone === 'casual') {
-      return text
-        .replace(/\bHello\b/gi, 'Hi')
-        .replace(/\bThank you\b/gi, 'Thanks')
-        .replace(/\bVery well\b/gi, 'Okay')
-        .replace(/\bexcellent\b/gi, 'awesome')
-        .replace(/\boutstanding\b/gi, 'great')
-        .replace(/\bgoing to\b/gi, 'gonna')
-        .replace(/\bwant to\b/gi, 'wanna');
+    const toneInstructions = {
+      neutral: 'Maintain the original tone and style while fixing errors.',
+      formal: 'Make the text more formal, professional, and polished.',
+      casual: 'Make the text more casual, friendly, and conversational.'
+    };
+
+    const systemPrompt = `You are an expert grammar, punctuation, and spelling checker. Your task is to:
+
+1. Fix all grammar errors
+2. Correct punctuation mistakes
+3. Fix spelling errors
+4. Improve sentence structure and clarity
+5. ${toneInstructions[tone]}
+
+Important guidelines:
+- Preserve the original meaning and intent
+- Only make necessary corrections and improvements
+- Return only the corrected text without explanations
+- Maintain the original formatting (paragraphs, line breaks)`;
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user',
+              content: text
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 2000,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 401) {
+          throw new Error('Invalid OpenAI API key. Please check your VITE_OPENAI_API_KEY environment variable.');
+        } else if (response.status === 429) {
+          throw new Error('OpenAI API rate limit exceeded. Please try again in a moment.');
+        } else if (response.status === 403) {
+          throw new Error('OpenAI API access denied. Please check your API key permissions.');
+        } else {
+          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+        }
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Invalid response from OpenAI API');
+      }
+
+      return data.choices[0].message.content.trim();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Failed to connect to OpenAI API. Please check your internet connection.');
+      }
     }
-    
-    return text;
   };
 
   return { refineText, isLoading };

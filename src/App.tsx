@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, Sun, FileText, Download, Copy, Loader2, Sparkles } from 'lucide-react';
+import { Moon, Sun, FileText, Download, Copy, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { ToneSelector } from './components/ToneSelector';
 import { TextInput } from './components/TextInput';
 import { OutputDisplay } from './components/OutputDisplay';
 import { ExportButtons } from './components/ExportButtons';
+import { ApiKeySetup } from './components/ApiKeySetup';
 import { useGrammarChecker } from './hooks/useGrammarChecker';
 import { useDarkMode } from './hooks/useDarkMode';
 
@@ -12,22 +13,44 @@ function App() {
   const [selectedTone, setSelectedTone] = useState<'neutral' | 'formal' | 'casual'>('neutral');
   const [outputText, setOutputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const { isDark, toggleDarkMode } = useDarkMode();
   const { refineText } = useGrammarChecker();
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('openai_api_key');
+    if (savedKey) {
+      setHasApiKey(true);
+      // Set environment variable for the session
+      (window as any).process = (window as any).process || {};
+      (window as any).process.env = (window as any).process.env || {};
+      (window as any).process.env.VITE_OPENAI_API_KEY = savedKey;
+    }
+  }, []);
 
   const handleRefineText = async () => {
     if (!inputText.trim()) return;
     
     setIsProcessing(true);
+    setError(null);
+    
     try {
       const refined = await refineText(inputText, selectedTone);
       setOutputText(refined);
     } catch (error) {
       console.error('Error refining text:', error);
-      setOutputText('Sorry, there was an error processing your text. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      setOutputText('');
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleApiKeySet = () => {
+    setHasApiKey(true);
+    setError(null);
   };
 
   return (
@@ -42,7 +65,7 @@ function App() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white">Gramo</h1>
-                <p className="text-white/80 text-sm">Write With Confidence</p>
+                <p className="text-white/80 text-sm">AI-Powered Grammar Checker</p>
               </div>
             </div>
             
@@ -58,6 +81,26 @@ function App() {
             </button>
           </header>
 
+          {/* API Key Setup */}
+          <ApiKeySetup onApiKeySet={handleApiKeySet} />
+
+          {/* Error Display */}
+          {error && (
+            <div className="glass-effect rounded-2xl p-4 shadow-xl mb-6 border-2 border-red-200 dark:border-red-800">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                    Error
+                  </h3>
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Main Content */}
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Input Section */}
@@ -69,7 +112,7 @@ function App() {
                 <TextInput
                   value={inputText}
                   onChange={setInputText}
-                  placeholder="Paste or type your text here to refine grammar, style, and tone..."
+                  placeholder="Paste or type your text here to fix grammar, punctuation, and spelling errors..."
                 />
               </div>
 
@@ -85,18 +128,18 @@ function App() {
 
               <button
                 onClick={handleRefineText}
-                disabled={!inputText.trim() || isProcessing}
+                disabled={!inputText.trim() || isProcessing || !hasApiKey}
                 className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Refining Text...</span>
+                    <span>AI is refining your text...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Refine Text</span>
+                    <span>Fix with AI</span>
                   </>
                 )}
               </button>
@@ -107,7 +150,7 @@ function App() {
               <div className="glass-effect rounded-2xl p-6 shadow-xl">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                    Refined Text
+                    AI-Refined Text
                   </h2>
                   {outputText && (
                     <button
@@ -136,7 +179,7 @@ function App() {
           {/* Footer */}
           <footer className="mt-16 text-center">
             <p className="text-white/60 text-sm">
-              Gramo – Write With Confidence
+              Gramo – AI-Powered Grammar Checker
             </p>
           </footer>
         </div>
